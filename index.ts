@@ -18,8 +18,8 @@ import { toSimpleSmartAccount } from "permissionless/accounts";
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const USER_PRIVATE_KEY = process.env.Key as Hex;
-const PIMLICO_API_KEY = "pim_jhiDshGQPyNzWd3igHghTV";
-const SPONSORSHIP_POLICY_ID = "sp_lyrical_bulldozer";
+const PIMLICO_API_KEY = process.env.pim;
+const SPONSORSHIP_POLICY_ID = process.env.pim_Id;
 
 const USDC_ADDRESS = "0x84b9b910527ad5c03a9ca831909e21e236ea7b06" as Hex //"0x036CbD53842c5426634e7929541eC2318f3dCF7e" as Hex;
 const PIMLICO_RPC = `https://api.pimlico.io/v2/97/rpc?apikey=${PIMLICO_API_KEY}`;
