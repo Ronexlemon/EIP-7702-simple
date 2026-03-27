@@ -8,33 +8,34 @@ import {
   parseUnits,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { bscTestnet } from "viem/chains";
+import {arbitrumSepolia } from "viem/chains";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
 import { createSmartAccountClient } from "permissionless";
 import { entryPoint06Abi, entryPoint07Address, toSimple7702SmartAccount } from "viem/account-abstraction";
 import { toSimpleSmartAccount } from "permissionless/accounts";
 
 
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const USER_PRIVATE_KEY = "0x2baa3fa2964c8ade8d9742b039f321dbbaf0844bae43e6f9da1612cbbd48df6f" as Hex;
-const PIMLICO_API_KEY = "pim_gRzUeVCttuscHQ719cjf8a";
-const SPONSORSHIP_POLICY_ID = "sp_lyrical_bulldozer";
+const USER_PRIVATE_KEY = process.env.PRIVATE_KEY as Hex;
+const PIMLICO_API_KEY = process.env.PIMLICO_API_KEY;
+const SPONSORSHIP_POLICY_ID = process.env.SPONSORSHIP_POLICY_ID;
 
-const USDC_ADDRESS = "0x84b9b910527ad5c03a9ca831909e21e236ea7b06" as Hex //"0x036CbD53842c5426634e7929541eC2318f3dCF7e" as Hex;
-const PIMLICO_RPC = `https://api.pimlico.io/v2/97/rpc?apikey=${PIMLICO_API_KEY}`;
+const USDC_ADDRESS = "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d" as Hex //usdc arbitrum sepolia
+const PIMLICO_RPC = `https://api.pimlico.io/v2/421614/rpc?apikey=${PIMLICO_API_KEY}`;
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
 const userEoa = privateKeyToAccount(USER_PRIVATE_KEY);
 
 const publicClient = createPublicClient({
-  chain: bscTestnet,
+  chain:arbitrumSepolia,
   transport: http(),
 });
 
 const pimlicoClient = createPimlicoClient({
-  chain: bscTestnet,
+  chain:arbitrumSepolia,
   transport: http(PIMLICO_RPC),
   entryPoint: {
     address: entryPoint07Address,
@@ -61,11 +62,12 @@ async function main() {
   // 2. Create the Smart Account Client with Pimlico Sponsorship
   const smartAccountClient = createSmartAccountClient({
     account: simple7702Account,
-    chain: bscTestnet,
+    chain:arbitrumSepolia,
     bundlerTransport: http(PIMLICO_RPC),
     paymaster: pimlicoClient,
     paymasterContext: {
       sponsorshipPolicyId: SPONSORSHIP_POLICY_ID,
+      //token:USDC_ADDRESS
     },
     userOperation: {
       estimateFeesPerGas: async () =>
@@ -75,7 +77,7 @@ async function main() {
 
   // 3. Prepare the Transaction (Sending 1 USDC)
   const recipient = "0x2c42A2Aa6af553c7F6ef27Fcbcd27E6A5fA175ff" as Hex;
-  const amount = parseUnits("5", 18);
+  const amount = parseUnits("2", 6);
 
   console.log(`📤 Sending 1 USDC from ${userEoa.address} (Gasless via Pimlico)...`);
 
@@ -87,7 +89,7 @@ async function main() {
   args: [smartAccountClient.account.address],
 });
 console.log(`📊 Actual USDC Adddress: ${smartAccountClient.account.address}`);
-console.log(`📊 Actual USDC Balance found: ${parseUnits(balance.toString(), -18)} USDC`);
+console.log(`📊 Actual USDC Balance found: ${parseUnits(balance.toString(), -6)} USDC`);
     // sendUserOperation handles the EIP-7702 authorization signature automatically
     const userOpHash = await smartAccountClient.sendUserOperation({
       account:simple7702Account,
@@ -100,7 +102,7 @@ console.log(`📊 Actual USDC Balance found: ${parseUnits(balance.toString(), -1
         },
       ],
       authorization:await userEoa.signAuthorization({
-    chainId: bscTestnet.id,
+    chainId:arbitrumSepolia.id,
     nonce: await publicClient.getTransactionCount({ address: userEoa.address }),
     contractAddress: simple7702Account.authorization?.address ?? userEoa.address,
   })
@@ -114,7 +116,7 @@ console.log(`📊 Actual USDC Balance found: ${parseUnits(balance.toString(), -1
     });
 
     console.log("✅ Transaction successful!");
-    console.log(`🔗 https://sepolia.basescan.org/tx/${receipt.receipt.transactionHash}`);
+    console.log(`🔗 https://sepolia.arbiscan.io/tx/${receipt.receipt.transactionHash}`);
 
   } catch (error: any) {
     console.error("\n❌ Execution Failed:");
