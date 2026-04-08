@@ -22,8 +22,9 @@ import { bsc } from "viem/chains";
 
 /* ─── Config ─────────────────────────────────────────────────────────────── */
 
-const PRIVATE_KEY  = process.env.PrivateKey  as `0x${string}`;
+const PRIVATE_KEY  = process.env.PRIVATE_KEY as `0x${string}`;
 const API_BASE_URL = "https://api.biconomy.io";
+
 
 // BSC USDT — 18 decimals
 const USDT = "0x55d398326f99059fF775485246999027B3197955" as `0x${string}`;
@@ -48,6 +49,75 @@ const publicClient = createPublicClient({
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
+/* ─── Poll network.biconomy.io for on-chain tx hash ─────────────────────── */
+
+const MEE_NODE_URL = "https://network.biconomy.io"; // ← your actual node URL
+
+import { parseAbiItem } from "viem";
+
+/**
+ * Watches BSC directly for the Transfer event from the sender.
+ * Fires as soon as the block is mined — no Biconomy API needed.
+ */
+async function waitForTransferOnChain(
+  tokenAddress: `0x${string}`,
+  from: `0x${string}`,
+  to: `0x${string}`,
+  timeoutMs = 60_000,
+  intervalMs = 1_000
+): Promise<{ txHash: string; blockNumber: bigint; gasUsed: bigint }> {
+
+  console.log("⏳ Waiting for Transfer event...");
+
+  let currentBlock = await publicClient.getBlockNumber();
+  const deadline   = Date.now() + timeoutMs;
+
+  const event = parseAbiItem(
+    "event Transfer(address indexed from, address indexed to, uint256 value)"
+  );
+
+  while (Date.now() < deadline) {
+    const latestBlock = await publicClient.getBlockNumber();
+
+    if (latestBlock >= currentBlock) {
+      const logs = await publicClient.getLogs({
+        address: tokenAddress,
+        event,
+        args: { from, to },
+        fromBlock: currentBlock,
+        toBlock: latestBlock,
+      });
+
+      if (logs.length > 0) {
+        const txHash = logs[0].transactionHash;
+
+        const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
+
+        if (receipt && receipt.status === "success") {
+          console.log("✅ Transfer detected & confirmed!");
+          console.log("   Tx Hash     :", receipt.transactionHash);
+          console.log("   Block Number:", receipt.blockNumber);
+          console.log("   Gas Used    :", receipt.gasUsed);
+
+          return {
+            txHash: receipt.transactionHash,
+            blockNumber: receipt.blockNumber,
+            gasUsed: receipt.gasUsed,
+          };
+        }
+
+        console.log("   Log found but no receipt yet, retrying...");
+      }
+
+      // Move forward — only scan new blocks next time
+      currentBlock = latestBlock + 1n;
+    }
+
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+
+  throw new Error("Timed out waiting for Transfer event");
+}
 async function getTokenDecimals(tokenAddress: `0x${string}`): Promise<number> {
   return publicClient.readContract({
     abi: parseAbi(["function decimals() view returns (uint8)"]),
@@ -206,7 +276,9 @@ async function transferTokenEip7702(
   });
   console.log("The result",result)
   
-
+  
+ const completion = await waitForTransferOnChain(USDT,account.address,recipient);
+ console.log("The real hash is",completion)
   const txHash = result.transactionHash ?? result.userOps?.[0]?.transactionHash;
   console.log("✅ Tx hash:", txHash);
   console.log(`🔍 https://bscscan.com/tx/${txHash}`);
@@ -214,7 +286,7 @@ async function transferTokenEip7702(
 }
 
 /* ─── Main ───────────────────────────────────────────────────────────────── */
-
+console.time("Total Execution Time")
 async function main() {
   if (!PRIVATE_KEY) throw new Error("Missing PrivateKey env var");
 
@@ -227,13 +299,18 @@ async function main() {
   // Check USDT balance on the EOA address directly
   await logBalance(USDT, account.address);
 
+  
+
   // Transfer 0.0001 USDT — gas paid in USDT from the EOA's own balance
   await transferTokenEip7702(
     USDT,     // token to send
     USDT,     // token to pay gas with (can be USDC instead)
-    "0xC36d344f77c296a0D35889FfaB47D2F3a45aaA0f",
-    "1"
+    "0xe3b63f67EB11680836a730A32b44fC6279E9Fb12",
+    "0.001"
   );
 }
-
-main().catch(console.error);
+main()
+  .then(() => {
+    console.timeEnd("Total Execution Time");
+  })
+  .catch(console.error);

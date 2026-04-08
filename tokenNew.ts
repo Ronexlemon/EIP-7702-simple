@@ -34,8 +34,8 @@ import { bsc } from "viem/chains";
 
 /* ─── Config ─────────────────────────────────────────────────────────────── */
 
-const PRIVATE_KEY = process.env.PrivateKey as Hex;
-const API_KEY     =  process.env.Pimlico_Api;
+const PRIVATE_KEY = process.env.PRIVATE_KEY as Hex;
+const API_KEY     =  process.env.PIMLICO_API_KEY;
 
 const USDT = "0x55d398326f99059fF775485246999027B3197955" as Hex; // BSC USDT, 18 decimals
 const USDC = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d" as Hex; // BSC USDC, 18 decimals
@@ -59,7 +59,7 @@ const pimlicoClient = createPimlicoClient({
   transport: http(PIMLICO_URL),
   entryPoint: {
     address: entryPoint07Address,
-    version: "0.7" as EntryPointVersion,
+    version: "0.8" as EntryPointVersion,
   },
 });
 
@@ -73,6 +73,7 @@ async function buildAccount(privateKey: Hex) {
   const account = await to7702SimpleSmartAccount({
     client: publicClient,
     owner,
+    
     // accountLogicAddress is optional — uses Pimlico's default Simple7702 impl
   });
 
@@ -95,6 +96,9 @@ function buildSponsoredClient(account: any) {
       estimateFeesPerGas: async () =>
         (await pimlicoClient.getUserOperationGasPrice()).fast,
     },
+    paymasterContext: {
+      sponsorshipPolicyId: "sp_lyrical_bulldozer", // ✅ your policy ID here
+    },
     // No paymasterContext → Pimlico sponsors for free
   });
 }
@@ -110,7 +114,8 @@ function buildTokenFeeClient(account: any, feeToken: Hex) {
         (await pimlicoClient.getUserOperationGasPrice()).fast,
     },
     paymasterContext: {
-      token: feeToken, // ✅ client level — not inside sendTransaction
+      //token: feeToken, // ✅ client level — not inside sendTransaction
+      sponsorshipPolicyId: "sp_lyrical_bulldozer", 
     },
   });
 }

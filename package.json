@@ -1,9 +1,9 @@
 {
   "name": "pimlico",
   "version": "1.0.0",
-  "main": "tokenBiconomy.ts",
+  "main": "tokenpim.ts",
   "scripts": {
-    "dev": "ts-node tokenBiconomy.ts",
+    "dev": "ts-node tokenpim.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -13,12 +13,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@biconomy/abstractjs": "^1.2.3",
-    "@metamask/delegation-toolkit": "^0.13.0",
-    "@openzeppelin/merkle-tree": "^1.0.8",
-    "@rhinestone/module-sdk": "^0.4.0",
-    "@safe-global/sdk-starter-kit": "^3.0.2",
-    "@safe-global/types-kit": "^3.0.0",
     "dotenv": "^17.3.1",
     "permissionless": "^0.3.4",
     "thirdweb": "^5.119.3",
